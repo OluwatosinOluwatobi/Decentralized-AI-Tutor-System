@@ -10,6 +10,7 @@
 (define-data-var next-credential-id uint u1)
 (define-data-var next-bounty-id uint u1)
 (define-data-var dao-proposal-threshold uint u3)
+(define-data-var next-review-id uint u1)
 
 (define-map users principal {
   user-type: (string-ascii 10),
@@ -75,6 +76,23 @@
   created-at: uint,
   deadline: uint
 })
+
+(define-map module-reviews uint {
+  module-id: uint,
+  reviewer: principal,
+  rating: uint,
+  review-text: (string-ascii 500),
+  helpful-votes: uint,
+  submitted-at: uint
+})
+
+(define-map module-ratings uint {
+  total-rating: uint,
+  review-count: uint,
+  average-rating: uint
+})
+
+(define-map review-helpfulness {review-id: uint, voter: principal} bool)
 
 (define-public (register-user (user-type (string-ascii 10)))
   (let ((user-data {user-type: user-type, reputation: u0, joined-at: stacks-block-height}))
@@ -255,6 +273,71 @@
         (merge (unwrap-panic bounty) {status: "completed"}))
       (ok true))))
 
+(define-public (submit-module-review 
+  (module-id uint) 
+  (rating uint) 
+  (review-text (string-ascii 500)))
+  (let ((review-id (var-get next-review-id))
+        (module (map-get? learning-modules module-id))
+        (progress (map-get? user-progress {user: tx-sender, module-id: module-id}))
+        (existing-review (filter-reviews-by-user-and-module tx-sender module-id))
+        (review-data {
+          module-id: module-id,
+          reviewer: tx-sender,
+          rating: rating,
+          review-text: review-text,
+          helpful-votes: u0,
+          submitted-at: stacks-block-height
+        }))
+    (begin
+      (asserts! (is-some module) (err err-not-found))
+      (asserts! (is-some progress) (err err-unauthorized))
+      (asserts! (and (>= rating u1) (<= rating u5)) (err err-invalid-input))
+      (asserts! (is-eq existing-review u0) (err err-already-exists))
+      (map-set module-reviews review-id review-data)
+      (unwrap-panic (update-module-rating module-id rating))
+      (unwrap-panic (award-reviewer-reputation))
+      (var-set next-review-id (+ review-id u1))
+      (ok review-id))))
+
+(define-public (vote-review-helpful (review-id uint) (helpful bool))
+  (let ((review (map-get? module-reviews review-id))
+        (vote-key {review-id: review-id, voter: tx-sender}))
+    (begin
+      (asserts! (is-some review) (err err-not-found))
+      (asserts! (is-some (map-get? users tx-sender)) (err err-unauthorized))
+      (asserts! (is-none (map-get? review-helpfulness vote-key)) (err err-already-exists))
+      (map-set review-helpfulness vote-key helpful)
+      (if helpful
+        (map-set module-reviews review-id 
+          (merge (unwrap-panic review) {helpful-votes: (+ (get helpful-votes (unwrap-panic review)) u1)}))
+        true)
+      (ok true))))
+
+(define-private (filter-reviews-by-user-and-module (user principal) (module-id uint))
+  u0)
+
+(define-private (update-module-rating (module-id uint) (new-rating uint))
+  (let ((current-rating (default-to {total-rating: u0, review-count: u0, average-rating: u0} 
+                                   (map-get? module-ratings module-id)))
+        (new-total (+ (get total-rating current-rating) new-rating))
+        (new-count (+ (get review-count current-rating) u1))
+        (new-average (/ new-total new-count)))
+    (begin
+      (map-set module-ratings module-id {
+        total-rating: new-total,
+        review-count: new-count,
+        average-rating: new-average
+      })
+      (ok true))))
+
+(define-private (award-reviewer-reputation)
+  (let ((current-user (unwrap-panic (map-get? users tx-sender))))
+    (begin
+      (map-set users tx-sender 
+        (merge current-user {reputation: (+ (get reputation current-user) u5)}))
+      (ok true))))
+
 (define-read-only (get-user (user principal))
   (map-get? users user))
 
@@ -278,3 +361,12 @@
 
 (define-read-only (get-user-vote (proposal-id uint) (voter principal))
   (map-get? dao-votes {proposal-id: proposal-id, voter: voter}))
+
+(define-read-only (get-module-review (review-id uint))
+  (map-get? module-reviews review-id))
+
+(define-read-only (get-module-rating (module-id uint))
+  (map-get? module-ratings module-id))
+
+(define-read-only (get-review-helpfulness (review-id uint) (voter principal))
+  (map-get? review-helpfulness {review-id: review-id, voter: voter}))
