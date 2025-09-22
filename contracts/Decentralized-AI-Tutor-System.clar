@@ -94,11 +94,27 @@
 
 (define-map review-helpfulness {review-id: uint, voter: principal} bool)
 
-(define-public (register-user (user-type (string-ascii 10)))
+(define-map referral-count principal uint)
+
+(define-public (register-user (user-type (string-ascii 10)) (referrer (optional principal)))
   (let ((user-data {user-type: user-type, reputation: u0, joined-at: stacks-block-height}))
     (if (is-none (map-get? users tx-sender))
       (begin
         (map-set users tx-sender user-data)
+        (if (is-some referrer)
+          (let ((referrer-princ (unwrap-panic referrer)))
+            (begin
+              (asserts! (not (is-eq referrer-princ tx-sender)) (err err-invalid-input))
+              (asserts! (is-some (map-get? users referrer-princ)) (err err-not-found))
+              (let ((current-user (unwrap-panic (map-get? users tx-sender)))
+                    (current-referrer (unwrap-panic (map-get? users referrer-princ)))
+                    (current-count (default-to u0 (map-get? referral-count referrer-princ))))
+                (begin
+                  (map-set users tx-sender (merge current-user {reputation: (+ (get reputation current-user) u10)}))
+                  (map-set users referrer-princ (merge current-referrer {reputation: (+ (get reputation current-referrer) u10)}))
+                  (map-set referral-count referrer-princ (+ current-count u1))
+                  true))))
+          true)
         (ok true))
       (err err-already-exists))))
 
@@ -370,3 +386,6 @@
 
 (define-read-only (get-review-helpfulness (review-id uint) (voter principal))
   (map-get? review-helpfulness {review-id: review-id, voter: voter}))
+
+(define-read-only (get-referral-count (user principal))
+  (default-to u0 (map-get? referral-count user)))

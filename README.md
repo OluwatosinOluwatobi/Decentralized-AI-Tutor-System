@@ -1,4 +1,4 @@
-> 🌍 Democratizing quality education through blockchain technology and AI-driven personalized learning
+Democratizing quality education through blockchain technology and AI-driven personalized learning
 
 ## 📖 Overview
 
@@ -22,8 +22,17 @@ The Decentralized AI Tutor System is a revolutionary blockchain-based educationa
 - **🌐 Language Diversity**: Promote educational content in multiple languages
 - **💎 Creator Rewards**: Incentivize high-quality educational content creation
 
+### 👥 Referral Rewards System
+- **🤝 User Referrals**: Earn reputation points by referring new users to the platform
+- **⭐ Reputation Boosts**: Both referrer and referee receive reputation increases upon successful registration
+- **📈 Engagement Incentives**: Promote community growth through gamified referral mechanics
+
 ## 🛠️ Smart Contract Functions
 
+```clarity
+(register-user user-type referrer)  ; Register with optional referrer for rewards
+(get-referral-count user)           ; Get number of successful referrals
+```
 ### User Management
 ```clarity
 (register-user "student")    ; Register as student or teacher
@@ -111,8 +120,18 @@ The Decentralized AI Tutor System is a revolutionary blockchain-based educationa
 ```
 
 #### 5. Create Content Bounty
+#### 6. Register with Referral
+```clarity
+(contract-call? .Decentralized-AI-Tutor-System register-user "student" (some referrer-principal))
+```
+
+#### 7. Check Referral Count
+```clarity
+(contract-call? .Decentralized-AI-Tutor-System get-referral-count user-principal)
+```
 ```clarity
 (contract-call? .Decentralized-AI-Tutor-System create-content-bounty
+- **👥 Referral Counts**: Track successful user referrals for reputation rewards
   "Spanish Math Course"
   "Create basic mathematics course in Spanish"
   "Spanish"
