@@ -11,6 +11,7 @@ The Decentralized AI Tutor System is a revolutionary blockchain-based educationa
 - **📊 Progress Tracking**: Real-time learning progress monitoring with completion percentages and scoring
 - **🏆 Achievement System**: Automatic credential issuance upon module completion
 - **🎖️ NFT Badges**: Earn digital badges (Gold, Silver, Bronze) based on performance scores
+- **🔗 Module Prerequisites**: Define optional prerequisites for structured learning paths and sequential mastery
 
 ### 🏛️ Decentralized Governance
 - **🗳️ Teacher DAO**: Democratic curriculum updates through proposal and voting system
@@ -41,7 +42,7 @@ The Decentralized AI Tutor System is a revolutionary blockchain-based educationa
 
 ### Learning Modules
 ```clarity
-(create-learning-module title description difficulty subject language)
+(create-learning-module title description difficulty subject language prerequisite)
 (enroll-in-module module-id)
 (update-progress module-id progress-percent score)
 (get-learning-module module-id)
@@ -101,17 +102,34 @@ The Decentralized AI Tutor System is a revolutionary blockchain-based educationa
 
 #### 2. Create a Learning Module (Teachers)
 ```clarity
-(contract-call? .Decentralized-AI-Tutor-System create-learning-module 
-  "Introduction to Blockchain" 
+(contract-call? .Decentralized-AI-Tutor-System create-learning-module
+  "Introduction to Blockchain"
   "Learn the fundamentals of blockchain technology"
-  u1 
-  "Technology" 
-  "English")
+  u1
+  "Technology"
+  "English"
+  none)  ; No prerequisite
+```
+
+#### 2.1 Create a Module with Prerequisite
+```clarity
+(contract-call? .Decentralized-AI-Tutor-System create-learning-module
+  "Advanced Blockchain"
+  "Deep dive into consensus mechanisms"
+  u3
+  "Technology"
+  "English"
+  (some u1))  ; Prerequisite: module ID 1
 ```
 
 #### 3. Enroll in a Module
 ```clarity
 (contract-call? .Decentralized-AI-Tutor-System enroll-in-module u1)
+```
+
+#### 3.1 Enroll in Module (with Prerequisite Check)
+```clarity
+(contract-call? .Decentralized-AI-Tutor-System enroll-in-module u2)  ; Fails if prerequisite u1 not completed
 ```
 
 #### 4. Update Learning Progress
@@ -144,7 +162,7 @@ The Decentralized AI Tutor System is a revolutionary blockchain-based educationa
 
 ### Data Structures
 - **👤 Users**: Store user types, reputation, and join dates
-- **📚 Learning Modules**: Educational content with metadata
+- **📚 Learning Modules**: Educational content with metadata and optional prerequisites
 - **📈 Progress Tracking**: User completion data per module
 - **🏅 Credentials**: Verified completion certificates
 - **🎖️ NFT Badges**: Achievement tokens with metadata

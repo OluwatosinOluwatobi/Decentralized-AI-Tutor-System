@@ -26,7 +26,8 @@
   language: (string-ascii 20),
   creator: principal,
   created-at: uint,
-  active: bool
+  active: bool,
+  prerequisite: (optional uint)
 })
 
 (define-map user-progress {user: principal, module-id: uint} {
@@ -118,12 +119,13 @@
         (ok true))
       (err err-already-exists))))
 
-(define-public (create-learning-module 
+(define-public (create-learning-module
   (title (string-ascii 100))
   (description (string-ascii 500))
   (difficulty uint)
   (subject (string-ascii 50))
-  (language (string-ascii 20)))
+  (language (string-ascii 20))
+  (prerequisite (optional uint)))
   (let ((module-id (var-get next-module-id))
         (module-data {
           title: title,
@@ -133,10 +135,14 @@
           language: language,
           creator: tx-sender,
           created-at: stacks-block-height,
-          active: true
+          active: true,
+          prerequisite: prerequisite
         }))
     (begin
       (asserts! (is-some (map-get? users tx-sender)) (err err-unauthorized))
+      (if (is-some prerequisite)
+        (asserts! (is-some (map-get? learning-modules (unwrap-panic prerequisite))) (err err-not-found))
+        true)
       (map-set learning-modules module-id module-data)
       (var-set next-module-id (+ module-id u1))
       (ok module-id))))
@@ -148,6 +154,11 @@
       (asserts! (is-some module) (err err-not-found))
       (asserts! (is-some (map-get? users tx-sender)) (err err-unauthorized))
       (asserts! (is-none (map-get? user-progress progress-key)) (err err-already-exists))
+      (if (is-some (get prerequisite (unwrap-panic module)))
+        (let ((prereq-id (unwrap-panic (get prerequisite (unwrap-panic module))))
+              (prereq-progress (map-get? user-progress {user: tx-sender, module-id: prereq-id})))
+          (asserts! (and (is-some prereq-progress) (is-eq (get progress-percent (unwrap-panic prereq-progress)) u100)) (err err-unauthorized)))
+        true)
       (map-set user-progress progress-key {
         progress-percent: u0,
         completion-time: none,
