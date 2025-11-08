@@ -8,6 +8,7 @@ The Decentralized AI Tutor System is a revolutionary blockchain-based educationa
 
 ### 🎯 Core Learning System
 - **📚 Learning Modules**: Create and manage educational content with difficulty levels and subject categorization
+- **🔀 Module Forking**: Enable educators to fork existing modules for customization and adaptation
 - **📊 Progress Tracking**: Real-time learning progress monitoring with completion percentages and scoring
 - **🏆 Achievement System**: Automatic credential issuance upon module completion
 - **🎖️ NFT Badges**: Earn digital badges (Gold, Silver, Bronze) based on performance scores
@@ -43,6 +44,7 @@ The Decentralized AI Tutor System is a revolutionary blockchain-based educationa
 ### Learning Modules
 ```clarity
 (create-learning-module title description difficulty subject language prerequisite)
+(fork-learning-module original-module-id new-title new-description new-difficulty new-subject new-language new-prerequisite)
 (enroll-in-module module-id)
 (update-progress module-id progress-percent score)
 (get-learning-module module-id)
@@ -109,6 +111,18 @@ The Decentralized AI Tutor System is a revolutionary blockchain-based educationa
   "Technology"
   "English"
   none)  ; No prerequisite
+```
+
+#### 2.2 Fork an Existing Module
+```clarity
+(contract-call? .Decentralized-AI-Tutor-System fork-learning-module
+  u1
+  "Advanced Blockchain Concepts"
+  "Deep dive into advanced blockchain topics"
+  u3
+  "Technology"
+  "English"
+  (some u2))  ; Prerequisite: module ID 2
 ```
 
 #### 2.1 Create a Module with Prerequisite

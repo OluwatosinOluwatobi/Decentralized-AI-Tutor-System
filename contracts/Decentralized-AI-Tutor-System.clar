@@ -400,3 +400,34 @@
 
 (define-read-only (get-referral-count (user principal))
   (default-to u0 (map-get? referral-count user)))
+
+(define-public (fork-learning-module
+  (original-module-id uint)
+  (new-title (string-ascii 100))
+  (new-description (string-ascii 500))
+  (new-difficulty uint)
+  (new-subject (string-ascii 50))
+  (new-language (string-ascii 20))
+  (new-prerequisite (optional uint)))
+  (let ((original-module (map-get? learning-modules original-module-id))
+        (new-module-id (var-get next-module-id))
+        (new-module-data {
+          title: new-title,
+          description: new-description,
+          difficulty: new-difficulty,
+          subject: new-subject,
+          language: new-language,
+          creator: tx-sender,
+          created-at: stacks-block-height,
+          active: true,
+          prerequisite: new-prerequisite
+        }))
+    (begin
+      (asserts! (is-some original-module) (err err-not-found))
+      (asserts! (is-some (map-get? users tx-sender)) (err err-unauthorized))
+      (if (is-some new-prerequisite)
+        (asserts! (is-some (map-get? learning-modules (unwrap-panic new-prerequisite))) (err err-not-found))
+        true)
+      (map-set learning-modules new-module-id new-module-data)
+      (var-set next-module-id (+ new-module-id u1))
+      (ok new-module-id))))
