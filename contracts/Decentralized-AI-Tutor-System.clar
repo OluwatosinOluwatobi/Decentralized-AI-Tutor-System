@@ -431,3 +431,12 @@
       (map-set learning-modules new-module-id new-module-data)
       (var-set next-module-id (+ new-module-id u1))
       (ok new-module-id))))
+
+(define-public (transfer-module-ownership (module-id uint) (new-owner principal))
+  (let ((module (map-get? learning-modules module-id)))
+    (begin
+      (asserts! (is-some module) (err err-not-found))
+      (asserts! (is-eq tx-sender (get creator (unwrap-panic module))) (err err-unauthorized))
+      (asserts! (is-some (map-get? users new-owner)) (err err-not-found))
+      (map-set learning-modules module-id (merge (unwrap-panic module) {creator: new-owner}))
+      (ok true))))
